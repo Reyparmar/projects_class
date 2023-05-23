@@ -1,7 +1,6 @@
-
 import 'dart:convert';
 
-import 'package:get_storage/get_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPre {
   static final SharedPre _sharedPre = SharedPre._internal();
@@ -14,56 +13,75 @@ class SharedPre {
 
   //shared keys
   static const isLogin = 'isLogin';
-  static const isLocationSend = 'isLocationSend';
   static const userData = 'userData';
-  static const language = 'language';
-  static const cartListLength = 'cartListLength';
-  static const selectedBrand = 'selectedBrand';
-  static const selectedCustomer = 'selectedCustomer';
-  static const selectedCustomer2 = 'selectedCustomer2';
-  static const  offlineCartList = 'offlineCartList';
+  static const userProfile = 'userProfile';
+  static const userLocation = 'userLocation';
+  static const token = 'token';
+  static const fcmToken = 'fcm_token';
 
+  static Future setValue({required String key, required dynamic value}) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (value.runtimeType == String) {
+      prefs.setString(key, value);
+    } else if (value.runtimeType == bool) {
+      prefs.setBool(key, value);
+    } else if (value.runtimeType == int) {
+      prefs.setInt(key, value);
+    } else if (value.runtimeType == double) {
+      prefs.setDouble(key, value);
+    } else {}
+  }
 
+  static setObj(String key, var toJson) async {
+    /// call this method like this
+    ///  LoginData data=LoginData.fromJson(loginresponse.data.tojson())
+    /// sp.setObj("",data);
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String user = jsonEncode(toJson);
+    return await prefs.setString(key, user);
+  }
 
-  static Future<void> setValue(String key, dynamic value) async {
-    final storage = GetStorage();
-    return storage.write(key, value);
+  static Future<Map<String, dynamic>> getObj(String key) async {
+    /// call this method like this
+    ///var data= sp.getObj("key);
+    ///Login loginData= Logindata.fromjson(data);
+    Map<String, dynamic> json = {};
+    if (key.isNotEmpty) {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String str = prefs.getString(key) ?? "";
+      if (str.isNotEmpty) {
+        json = jsonDecode(str);
+      }
+      json;
+    }
+    return json; // get data by calling from json method in model class
   }
 
   static Future<String> getStringValue(String key) async {
-    final storage = GetStorage();
-    return storage.read<String>(key) ?? '';
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(key) ?? '';
   }
 
-  static getBoolValue(String key, {bool defaultValue = false}) async {
-    final storage = GetStorage();
-    return storage.read<bool>(key) ?? false;
+  static Future<bool> getBoolValue(String key, {bool defaultValue = false}) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(key) ?? false;
   }
 
-  static getIntValue(String key, {int defaultValue = -1}) async {
-    final storage = GetStorage();
-    return storage.read<int>(key) ?? -1;
+  static Future<int> getIntValue(String key, {int defaultValue = -1}) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(key) ?? -1;
   }
 
-  static Future<void> clearAll() async {
-    return GetStorage().erase();
+  static Future clearAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
   }
-  static Future<void> clear(String key) async {
-    final storage = GetStorage();
-    return storage.remove(key);
-  }
-
 
   /// call this method like this
   ///var data= sp.getObj('key);
   ///Login loginData= Logindata.fromjson(data);
-  static Future<Map<String, dynamic>> getObjs(String key) async {
-    final prefs = GetStorage();
-    return prefs.read(key);
-  }
-
-  static Future<List> getList(String key) async {
-    final prefs = GetStorage();
-    return jsonDecode(prefs.read(key));
+  static Future getObjs(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.get(key);
   }
 }
