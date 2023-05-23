@@ -1,33 +1,34 @@
+import 'package:mate/repository/model/app_config.dart';
+
 class ApiMethods {
-  static final ApiMethods _apiMethods = ApiMethods._internal();
+  static final ApiMethods instance = ApiMethods._internal();
 
   factory ApiMethods() {
-    return _apiMethods;
+    return instance;
   }
 
   ApiMethods._internal();
-
-  static const String domain = 'https://api-test.checkmate.zone/';
-  static const String version = 'v1/';
-  static const String host = domain + version;
-
-
-
-
+  static String DOMAIN = AppConfig.shared.config.baseUrl;
+  static const String VERSION = 'v1/';
+  static String HOST = DOMAIN + VERSION;
 
   ///[Methods Apis]
-  //String login = '${host}auth/sms-otp';
-  String userLogin = 'Login/userLogin';
-  String forgotPassword = 'forgotpassword/forgototpget';
-  String itemList = 'item/itemlist';
-  String varietyList = 'varity/varitylist';
-  String partyList = 'allpartylist/partydrpdon';
-  String customerReg = 'Addpartynew/addpartydetailnew';
-  String addItem = 'addorderitem/additem';
-  String productSerialNoDetail = 'productserialnodetail/productserialbilldetail';
-  String warrantyRegistration = 'warrantyregistration/warrantyentry';
-  String placeOrder = 'placeorder/orderentry';
-  String customerJobEntry = 'customerjobentry/jobentry';
-  String orderListExecutive = 'Executiveorderlist/orderlistexecutive';
-  String orderWithProduct = 'orderdetail/orderwithproduct';
+  String SEND_OTP = HOST + 'auth/sms-otp';
+  String VERIFY_OTP = HOST + 'auth/otp-verify';
+  String PROFILE = HOST + 'profiles'; // also used for updating user profile
+  String UPLOAD_PIC = HOST + 'profiles/upload';
+  String MATCH_REQUEST = HOST + 'matches/requests';
+  String MATCH = VERSION + 'matches';
+  String USER = HOST + 'users';
+  String LIKE_TO_MEET = DOMAIN + 'like-to-meet';
+  String PROFESSIONS = DOMAIN + 'professions';
+  String INTERESTS = DOMAIN + 'interests';
+  String LOOKING_FOR = DOMAIN + 'looking-for';
+  String NEAR_BY = '/' + VERSION + 'profiles/nearby';
+  String OTHER_USER_PROFILE = VERSION + 'profiles/';
+  String SOCKET_SERVER_URL = '';
+  String CHECKINS = HOST + 'checkins';
+  String DELETE_MEDIA = HOST + 'profiles/media/';
+  String MESSAGE_STATUS = VERSION + 'matches/message-status';
+  String SEND_FCM_TOKEN_TO_SERVER = HOST + 'notifications/register';
 }

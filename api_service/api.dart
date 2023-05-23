@@ -1,32 +1,38 @@
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:indoshyam/repository/api_service/api_client.dart';
-import 'package:indoshyam/repository/api_service/api_methods.dart';
-import 'package:indoshyam/repository/model/add_item_response.dart';
-import 'package:indoshyam/repository/model/customer_job_entry_response.dart';
-import 'package:indoshyam/repository/model/customer_reg_response.dart';
-import 'package:indoshyam/repository/model/forgot_password_response.dart';
-import 'package:indoshyam/repository/model/order_list_response.dart';
-import 'package:indoshyam/repository/model/party_list_response.dart';
-import 'package:indoshyam/repository/model/product_list_response.dart';
-import 'package:indoshyam/repository/model/product_serial_num_response.dart';
-import 'package:indoshyam/repository/model/user_login_response.dart';
-import 'package:indoshyam/repository/model/variety_list_response.dart';
-import 'package:indoshyam/repository/model/warranty_reg_response.dart';
-
-import '../model/order_detail_response.dart';
-import '../model/order_now_response.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:mate/repository/api_service/api_client.dart';
+import 'package:mate/repository/api_service/api_methods.dart';
+import 'package:mate/repository/api_service/request_keys.dart';
+import 'package:mate/repository/model/common_response.dart';
+import 'package:mate/repository/model/get_checkins_response.dart';
+import 'package:mate/repository/model/get_match_request_response.dart';
+import 'package:mate/repository/model/get_match_response.dart';
+import 'package:mate/repository/model/get_near_by_checkins_response.dart';
+import 'package:mate/repository/model/get_near_by_response.dart';
+import 'package:mate/repository/model/get_user_details_response.dart';
+import 'package:mate/repository/model/get_user_profile_response.dart';
+import 'package:mate/repository/model/interests_list_response.dart';
+import 'package:mate/repository/model/like_to_meet_response.dart';
+import 'package:mate/repository/model/looking_for_response.dart';
+import 'package:mate/repository/model/otp_send_response.dart';
+import 'package:mate/repository/model/otp_verify_response.dart';
+import 'package:mate/repository/model/profession_list_response.dart';
+import 'package:mate/src/utils/constants.dart';
+import 'package:mate/src/utils/shared_pre.dart';
 
 class Api {
   final ApiMethods _apiMethods = ApiMethods();
   final ApiClient _apiClient = ApiClient();
 
-  static final Api api = Api._internal();
+  static final Api _api = Api._internal();
   final Connectivity connectivity = Connectivity();
 
   factory Api() {
-    return api;
+    return _api;
   }
 
   Api._internal();
@@ -34,336 +40,758 @@ class Api {
   Future<Map<String, String>> getHeader() async {
     Map<String, String> header = {};
     try {
-      // var data = await SharedPre.getObj(SharedPre.userData);
-      // OtpVerifyResponse userData = OtpVerifyResponse.fromJson(data);
-      // header[RequestKeys.tokenHeader] = userData.data?.token?.data.toString() ?? '';
-      // header[RequestKeys.idHeader] = userData.data?.user?.id.toString() ?? '';
+      var data = await SharedPre.getObj(SharedPre.userData);
+      OtpVerifyResponse userData = OtpVerifyResponse.fromJson(data);
+      header[RequestKeys.idHeader] = userData.data?.user?.id.toString() ?? '';
+      header[RequestKeys.tokenHeader] = userData.data?.token?.data.toString() ?? '';
     } catch (e) {
-      if (kDebugMode) {
-        print(e);
-      }
+      print(e);
     }
     return header;
   }
 
-  Future<UserLoginResponse> loginAPI(Map<String, String> body) async {
+  Future<SendOtpResponse> sendOtpApi(Map<String, String> body) async {
     if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
         await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
       String res = await _apiClient.postMethod(
-          method: _apiMethods.userLogin, body: body);
+        method: _apiMethods.SEND_OTP,
+        body: body,
+      );
       if (res.isNotEmpty) {
         try {
-          return userLoginResponseFromJson(res);
+          return sendOtpResponseFromJson(res);
         } catch (e) {
           if (kDebugMode) {
             print(e);
           }
-          return UserLoginResponse(status: 500, message: e.toString());
+          return SendOtpResponse(
+            success: false,
+            error: ResError(
+              message: AppString.somethingWent,
+            ),
+          );
         }
       } else {
-        return UserLoginResponse(status: 500, message: 'Something went wrong');
+        return SendOtpResponse(
+          success: false,
+        );
       }
     } else {
-      return UserLoginResponse(status: 500, message: 'No internet');
-
+      return SendOtpResponse(
+        success: false,
+        error: ResError(
+          message: AppString.noInternet,
+        ),
+      );
     }
   }
 
-  Future<ForgotPasswordApiResponse> forgotPasswordAPI(
-      Map<String, String> body) async {
+  Future<OtpVerifyResponse> verifyOtpApi(Map<String, String> body) async {
     if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
         await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
       String res = await _apiClient.postMethod(
-          method: _apiMethods.forgotPassword, body: body);
+        method: _apiMethods.VERIFY_OTP,
+        body: body,
+      );
       if (res.isNotEmpty) {
         try {
-          return forgotPasswordApiResponseFromJson(res);
+          return otpVerifyResponseFromJson(res);
         } catch (e) {
           if (kDebugMode) {
             print(e);
           }
-          return ForgotPasswordApiResponse(status: 500, message: e.toString());
+          return OtpVerifyResponse(
+            success: false,
+            error: ResError(
+              message: AppString.somethingWent,
+            ),
+          );
         }
       } else {
-        return ForgotPasswordApiResponse(
-            status: 500, message: 'Something went wrong');
+        return OtpVerifyResponse(
+          success: false,
+        );
       }
     } else {
-      return ForgotPasswordApiResponse(status: 500, message: 'No internet');
-        }
-  }
-
-  Future<ProductListApiResponse> productListAPI(
-      Map<String, String> body) async {
-    if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
-        await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
-      String res =
-          await _apiClient.postMethod(method: _apiMethods.itemList, body: body);
-      if (res.isNotEmpty) {
-        try {
-          return productListApiResponseFromJson(res);
-        } catch (e) {
-          if (kDebugMode) {
-            print(e);
-          }
-          return ProductListApiResponse(status: 500, message: e.toString());
-        }
-      } else {
-        return ProductListApiResponse(
-            status: 500, message: 'Something went wrong');
-      }
-    } else {
-      return ProductListApiResponse(status: 500, message: 'No internet');
-
+      return OtpVerifyResponse(
+        success: false,
+        error: ResError(
+          message: AppString.noInternet,
+        ),
+      );
     }
   }
 
-  Future<VarietyListApiResponse> varietyListAPI(
-      Map<String, String> body) async {
+  Future<GetUserDetailResponse> getUserDetailApi() async {
     if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
         await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
-      String res = await _apiClient.postMethod(
-          method: _apiMethods.varietyList, body: body);
+      var header = await getHeader();
+
+      String res = await _apiClient.getMethod(
+        method: _apiMethods.USER,
+        header: header,
+      );
       if (res.isNotEmpty) {
         try {
-          return varietyListApiResponseFromJson(res);
+          return getUserDetailResponseFromJson(res);
         } catch (e) {
           if (kDebugMode) {
             print(e);
           }
-          return VarietyListApiResponse(status: 500, message: e.toString());
+          return GetUserDetailResponse(
+            success: false,
+            error: AppString.somethingWent,
+          );
         }
       } else {
-        return VarietyListApiResponse(
-            status: 500, message: 'Something went wrong');
+        return GetUserDetailResponse(
+          success: false,
+        );
       }
     } else {
-      return VarietyListApiResponse(status: 500, message: 'No internet');
-
+      return GetUserDetailResponse(
+        success: false,
+        error: AppString.noInternet,
+      );
     }
   }
 
-  Future<PartyListApiResponse> partyListAPI(Map<String, String> body) async {
+  Future<CommonResponse> setupProfileApi(Map<String, dynamic> body) async {
     if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
         await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
-      String res = await _apiClient.postMethod(
-          method: _apiMethods.partyList, body: body);
+      var header = await getHeader();
+      final res = await _apiClient.patchMethod(
+        method: _apiMethods.PROFILE,
+        header: header,
+        body: body,
+      );
       if (res.isNotEmpty) {
         try {
-          return partyListApiResponseFromJson(res);
+          return CommonResponse.fromJson(jsonDecode(res));
         } catch (e) {
           if (kDebugMode) {
             print(e);
           }
-          return PartyListApiResponse(status: 500, message: e.toString());
+          return CommonResponse.fromJson(jsonDecode(res));
         }
       } else {
-        return PartyListApiResponse(
-            status: 500, message: 'Something went wrong');
+        return CommonResponse(
+          success: false,
+          error: ResError(
+            message: AppString.somethingWent,
+          ),
+        );
       }
     } else {
-      return PartyListApiResponse(status: 500, message: 'No internet');
-
+      return CommonResponse(
+        success: false,
+        error: ResError(
+          message: AppString.noInternet,
+        ),
+      );
     }
   }
 
-  Future<CustomerRegResponse> customerRegistrationAPI(
-      Map<String, String> body) async {
+  Future<GetUserProfileResponse> getUserProfileApi({String? otherUserId}) async {
     if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
         await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
-      String res = await _apiClient.postMethod(
-          method: _apiMethods.customerReg, body: body);
+      var header = await getHeader();
+      String method;
+      if (otherUserId != null) {
+        method = _apiMethods.PROFILE + '/' + otherUserId;
+      } else {
+        method = _apiMethods.PROFILE;
+      }
+      final res = await _apiClient.getMethod(
+        method: method,
+        header: header,
+      );
       if (res.isNotEmpty) {
         try {
-          return customerRegResponseFromJson(res);
+          return getUserProfileResponseFromJson(res);
         } catch (e) {
           if (kDebugMode) {
             print(e);
           }
-          return CustomerRegResponse(status: 500, message: e.toString());
+          return getUserProfileResponseFromJson(res);
         }
       } else {
-        return CustomerRegResponse(
-            status: 500, message: 'Something went wrong');
+        return getUserProfileResponseFromJson(res);
       }
     } else {
-      return CustomerRegResponse(status: 500, message: 'No internet');
-
+      return GetUserProfileResponse(
+        success: false,
+        error: AppString.noInternet,
+      );
     }
   }
 
-  Future<AddItemResponse> addProductAPI(
-      Map<String, String> body) async {
+  Future<LikeToMeetResponse> getLikeToMeetListApi() async {
     if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
         await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
-      String res = await _apiClient.postMethod(
-          method: _apiMethods.addItem,
-          body: body,);
+      final res = await _apiClient.getMethod(
+        method: _apiMethods.LIKE_TO_MEET,
+      );
       if (res.isNotEmpty) {
         try {
-          return addItemResponseFromJson(res);
+          return likeToMeetResponseFromJson(res);
         } catch (e) {
           if (kDebugMode) {
             print(e);
           }
-          return AddItemResponse(status: 500, message: e.toString());
+          return likeToMeetResponseFromJson(res);
         }
       } else {
-        return AddItemResponse(status: 500, message: 'Something went wrong');
+        return LikeToMeetResponse(
+          success: false,
+          error: AppString.somethingWent,
+        );
       }
     } else {
-      return AddItemResponse(status: 500, message: 'No internet');
-
+      return LikeToMeetResponse(
+        success: false,
+        error: AppString.noInternet,
+      );
     }
   }
 
-  Future<ProductSerialNumResponse> checkSerialNumberAPI(
-      Map<String, String> body) async {
+  Future<LookingForListResponse> getLookingForListApi() async {
     if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
         await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
-      String res = await _apiClient.postMethod(
-          method: _apiMethods.productSerialNoDetail, body: body);
+      final res = await _apiClient.getMethod(
+        method: _apiMethods.LOOKING_FOR,
+      );
       if (res.isNotEmpty) {
         try {
-          return productSerialNumResponseFromJson(res);
+          return lookingForListResponseFromJson(res);
         } catch (e) {
           if (kDebugMode) {
             print(e);
           }
-          return ProductSerialNumResponse(status: 500, message: e.toString());
+          return lookingForListResponseFromJson(res);
         }
       } else {
-        return ProductSerialNumResponse(
-            status: 500, message: 'Something went wrong');
+        return LookingForListResponse(
+          success: false,
+          error: AppString.somethingWent,
+        );
       }
     } else {
-      return ProductSerialNumResponse(status: 500, message: 'No internet');
-
+      return LookingForListResponse(
+        success: false,
+        error: AppString.noInternet,
+      );
     }
   }
 
-  Future<WarrantyRegResponse> warrantyRegAPI(
-      Map<String, String> body) async {
+  Future<ProfessionListResponse> getProfessionListApi() async {
     if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
         await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
-      String res = await _apiClient.postMethod(
-          method: _apiMethods.warrantyRegistration, body: body);
+      final res = await _apiClient.getMethod(
+        method: _apiMethods.PROFESSIONS,
+      );
       if (res.isNotEmpty) {
         try {
-          return warrantyRegResponseFromJson(res);
+          return professionListResponseFromJson(res);
         } catch (e) {
           if (kDebugMode) {
             print(e);
           }
-          return WarrantyRegResponse(status: 500, message: e.toString());
+          return professionListResponseFromJson(res);
         }
       } else {
-        return WarrantyRegResponse(
-            status: 500, message: 'Something went wrong');
+        return ProfessionListResponse(
+          success: false,
+          error: AppString.somethingWent,
+        );
       }
     } else {
-      return WarrantyRegResponse(status: 500, message: 'No internet');
-
+      return ProfessionListResponse(
+        success: false,
+        error: AppString.noInternet,
+      );
     }
   }
 
-  Future<OrderNowResponse> placeOrderApi(
-      Map<String, String> body) async {
+  Future<InterestsListResponse> getInterestsListApi() async {
     if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
         await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
-      String res = await _apiClient.postMethod(
-          method: _apiMethods.placeOrder, body: body);
+      final res = await _apiClient.getMethod(
+        method: _apiMethods.INTERESTS,
+      );
       if (res.isNotEmpty) {
         try {
-          return orderNowResponseFromJson(res);
+          return interestsListResponseFromJson(res);
         } catch (e) {
           if (kDebugMode) {
             print(e);
           }
-          return OrderNowResponse(status: 500, message: e.toString());
+          return interestsListResponseFromJson(res);
         }
       } else {
-        return OrderNowResponse(
-            status: 500, message: 'Something went wrong');
+        return InterestsListResponse(
+          success: false,
+          error: AppString.somethingWent,
+        );
       }
     } else {
-      return OrderNowResponse(status: 500, message: 'No internet');
-
+      return InterestsListResponse(
+        success: false,
+        error: AppString.noInternet,
+      );
     }
   }
 
-  Future<CustomerJobEntryResponse> customerJobEntryApi(
-      Map<String, String> body) async {
+  Future<CommonResponse> uploadImageApi({required List<File> files}) async {
     if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
         await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
-      String res = await _apiClient.postMethod(
-          method: _apiMethods.customerJobEntry, body: body);
+      var header = await getHeader();
+      Map<String, String> body = {};
+      files.forEach((element) {
+        body[RequestKeys.image] = element.path;
+      });
+      final res = await _apiClient.postMultipartMethod(
+        method: _apiMethods.UPLOAD_PIC,
+        header: header,
+        body: body,
+        files: files,
+      );
       if (res.isNotEmpty) {
         try {
-          return customerJobEntryResponseFromJson(res);
+          return CommonResponse.fromJson(jsonDecode(res));
         } catch (e) {
           if (kDebugMode) {
             print(e);
           }
-          return CustomerJobEntryResponse(status: 500, message: e.toString());
+          return CommonResponse.fromJson(jsonDecode(res));
         }
       } else {
-        return CustomerJobEntryResponse(
-            status: 500, message: 'Something went wrong');
+        return CommonResponse(
+          success: false,
+          error: ResError(
+            message: AppString.somethingWent,
+          ),
+        );
       }
     } else {
-      return CustomerJobEntryResponse(status: 500, message: 'No internet');
-
+      return CommonResponse(
+        success: false,
+        error: ResError(
+          message: AppString.noInternet,
+        ),
+      );
     }
   }
 
-  Future<OrderListResponse> orderListApi(
-      Map<String, String> body) async {
+  Future<CommonResponse> deleteImageApi({required String mediaId}) async {
     if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
         await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
-      String res = await _apiClient.postMethod(
-          method: _apiMethods.orderListExecutive, body: body);
+      var header = await getHeader();
+      String res = await _apiClient.deleteMethod(
+        method: _apiMethods.DELETE_MEDIA + mediaId,
+        header: header,
+      );
       if (res.isNotEmpty) {
         try {
-          return orderListResponseFromJson(res);
+          return CommonResponse.fromJson(jsonDecode(res));
         } catch (e) {
           if (kDebugMode) {
             print(e);
           }
-          return OrderListResponse(status: 500, message: e.toString());
+          return CommonResponse.fromJson(jsonDecode(res));
         }
       } else {
-        return OrderListResponse(
-            status: 500, message: 'Something went wrong');
+        return CommonResponse(
+          success: false,
+          error: ResError(
+            message: AppString.somethingWent,
+          ),
+        );
       }
     } else {
-      return OrderListResponse(status: 500, message: 'No internet');
-
+      return CommonResponse(
+        success: false,
+        error: ResError(
+          message: AppString.noInternet,
+        ),
+      );
     }
   }
 
-  Future<OrderDetailResponse> orderDetailApi(
-      Map<String, String> body) async {
+  Future<GetNearByListResponse> getNearByListApi(Position position) async {
     if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
         await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
-      String res = await _apiClient.postMethod(
-          method: _apiMethods.orderWithProduct, body: body);
+      var header = await getHeader();
+      Map<String, String> queryParam = {
+        RequestKeys.lat: position.latitude.toString(),
+        RequestKeys.lng: position.longitude.toString(),
+      };
+      String res = await _apiClient.getQueryMethod(
+        method: _apiMethods.NEAR_BY,
+        query: queryParam,
+        header: header,
+      );
       if (res.isNotEmpty) {
         try {
-          return orderDetailResponseFromJson(res);
+          return getNearByListResponseFromJson(res);
         } catch (e) {
           if (kDebugMode) {
             print(e);
           }
-          return OrderDetailResponse(status: 500, message: e.toString());
+          return getNearByListResponseFromJson(res);
         }
       } else {
-        return OrderDetailResponse(
-            status: 500, message: 'Something went wrong');
+        return GetNearByListResponse(
+          success: false,
+          error: AppString.somethingWent,
+        );
       }
     } else {
-      return OrderDetailResponse(status: 500, message: 'No internet');
+      return GetNearByListResponse(
+        success: false,
+        error: AppString.noInternet,
+      );
+    }
+  }
 
+  Future<CommonResponse> sendMatchRequest(Map<String, String> body) async {
+    if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
+        await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
+      var header = await getHeader();
+      String res = await _apiClient.postMethod(
+        method: _apiMethods.MATCH_REQUEST,
+        body: body,
+        header: header,
+      );
+      if (res.isNotEmpty) {
+        try {
+          return commonResponseFromJson(res);
+        } catch (e) {
+          if (kDebugMode) {
+            print(e);
+          }
+          return CommonResponse(
+            success: false,
+            error: ResError(
+              message: AppString.somethingWent,
+            ),
+          );
+        }
+      } else {
+        return CommonResponse(
+          success: false,
+          error: ResError(
+            message: AppString.somethingWent,
+          ),
+        );
+      }
+    } else {
+      return CommonResponse(
+        success: false,
+        error: ResError(
+          message: AppString.noInternet,
+        ),
+      );
+    }
+  }
+
+  Future<GetMatchRequestResponse> getMatchRequest() async {
+    if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
+        await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
+      var header = await getHeader();
+      String res = await _apiClient.getMethod(
+        method: _apiMethods.MATCH_REQUEST,
+        header: header,
+      );
+      if (res.isNotEmpty) {
+        try {
+          return getMatchRequestResponseFromJson(res);
+        } catch (e) {
+          if (kDebugMode) {
+            print(e);
+          }
+          return getMatchRequestResponseFromJson(res);
+        }
+      } else {
+        return GetMatchRequestResponse(
+          success: false,
+          error: AppString.somethingWent,
+        );
+      }
+    } else {
+      return GetMatchRequestResponse(
+        success: false,
+        error: AppString.noInternet,
+      );
+    }
+  }
+
+  Future<CommonResponse> checkInZone(Map<String, String> body) async {
+    if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
+        await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
+      var header = await getHeader();
+      String res = await _apiClient.postMethod(
+        method: _apiMethods.CHECKINS,
+        body: body,
+        header: header,
+      );
+      if (res.isNotEmpty) {
+        try {
+          return commonResponseFromJson(res);
+        } catch (e) {
+          if (kDebugMode) {
+            print(e);
+          }
+          return CommonResponse(success: false);
+        }
+      } else {
+        return CommonResponse(success: false);
+      }
+    } else {
+      return CommonResponse(
+        success: false,
+        error: ResError(
+          message: AppString.noInternet,
+        ),
+      );
+    }
+  }
+
+  Future<GetCheckinsResponse> getCheckIns() async {
+    if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
+        await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
+      var header = await getHeader();
+      String res = await _apiClient.getMethod(
+        method: _apiMethods.CHECKINS,
+        header: header,
+      );
+      if (res.isNotEmpty) {
+        try {
+          return getCheckinsResponseFromJson(res);
+        } catch (e) {
+          if (kDebugMode) {
+            print(e);
+          }
+          return GetCheckinsResponse(
+            success: false,
+          );
+        }
+      } else {
+        return GetCheckinsResponse(
+          success: false,
+        );
+      }
+    } else {
+      return GetCheckinsResponse(
+        success: false,
+        error: AppString.noInternet,
+      );
+    }
+  }
+
+  Future<GetCheckinsResponse> updateChekIns({
+    required String checkInId,
+    required Map<String, dynamic> body,
+  }) async {
+    if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
+        await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
+      var header = await getHeader();
+      String res = await _apiClient.putMethod(
+        method: _apiMethods.CHECKINS + '/$checkInId',
+        body: body,
+        header: header,
+      );
+      if (res.isNotEmpty) {
+        try {
+          return getCheckinsResponseFromJson(res);
+        } catch (e) {
+          if (kDebugMode) {
+            print(e);
+          }
+          return GetCheckinsResponse(
+            success: false,
+          );
+        }
+      } else {
+        return GetCheckinsResponse(
+          success: false,
+        );
+      }
+    } else {
+      return GetCheckinsResponse(
+        success: false,
+        error: AppString.noInternet,
+      );
+    }
+  }
+
+  Future<CommonResponse> checkout({
+    required String checkInId,
+  }) async {
+    if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
+        await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
+      var header = await getHeader();
+      String res = await _apiClient.putMethod(
+        method: _apiMethods.CHECKINS + '/$checkInId/checkout',
+        header: header,
+      );
+      if (res.isNotEmpty) {
+        try {
+          return commonResponseFromJson(res);
+        } catch (e) {
+          if (kDebugMode) {
+            print(e);
+          }
+          return CommonResponse(
+            success: false,
+          );
+        }
+      } else {
+        return CommonResponse(
+          success: false,
+        );
+      }
+    } else {
+      return CommonResponse(
+        success: false,
+        error: ResError(
+          message: AppString.noInternet,
+        ),
+      );
+    }
+  }
+
+  Future<GetNearByCheckinsResponse> getNearbyCheckins({
+    required String checkInId,
+  }) async {
+    if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
+        await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
+      var header = await getHeader();
+      String res = await _apiClient.getMethod(
+        method: _apiMethods.CHECKINS + '/$checkInId/nearby',
+        header: header,
+      );
+      if (res.isNotEmpty) {
+        try {
+          return getNearByCheckinsResponseFromJson(res);
+        } catch (e) {
+          if (kDebugMode) {
+            print(e);
+          }
+          return GetNearByCheckinsResponse(
+            success: false,
+          );
+        }
+      } else {
+        return GetNearByCheckinsResponse(
+          success: false,
+        );
+      }
+    } else {
+      return GetNearByCheckinsResponse(
+        success: false,
+        error: ResError(
+          message: 'No Internet,',
+        ),
+      );
+    }
+  }
+
+  Future<GetMatchResponse> getMatchApi({required bool isChatList}) async {
+    if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
+        await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
+      var header = await getHeader();
+      Map<String, String> queryParam = {
+        RequestKeys.message: isChatList ? '1' : '0',
+      };
+      String res = await _apiClient.getQueryMethod(
+        method: _apiMethods.MATCH,
+        header: header,
+        query: queryParam,
+      );
+      if (res.isNotEmpty) {
+        try {
+          return getMatchResponseFromJson(res);
+        } catch (e) {
+          if (kDebugMode) {
+            print(e);
+          }
+          return GetMatchResponse(
+            success: false,
+          );
+        }
+      } else {
+        return GetMatchResponse(
+          success: false,
+        );
+      }
+    } else {
+      return GetMatchResponse(
+        success: false,
+        error: AppString.noInternet,
+      );
+    }
+  }
+
+  Future<CommonResponse> setMessageStatusApi(String matchId) async {
+    if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
+        await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
+      var header = await getHeader();
+      Map<String, String> queryParam = {
+        RequestKeys.id: matchId,
+      };
+      String res = await _apiClient.getQueryMethod(
+        method: _apiMethods.MESSAGE_STATUS,
+        query: queryParam,
+        header: header,
+      );
+      if (res.isNotEmpty) {
+        try {
+          return commonResponseFromJson(res);
+        } catch (e) {
+          if (kDebugMode) {
+            print(e);
+          }
+          return CommonResponse(
+            success: false,
+          );
+        }
+      } else {
+        return CommonResponse(
+          success: false,
+        );
+      }
+    } else {
+      return CommonResponse(
+        success: false,
+        error: ResError(
+          message: AppString.noInternet,
+        ),
+      );
+    }
+  }
+
+  Future<CommonResponse> sendFcmTokenToServerApi({required String fcmToken}) async {
+    if (await connectivity.checkConnectivity() == ConnectivityResult.wifi ||
+        await connectivity.checkConnectivity() == ConnectivityResult.mobile) {
+      var header = await getHeader();
+      await _apiClient.postMethod(
+        method: _apiMethods.SEND_FCM_TOKEN_TO_SERVER,
+        body: {
+          RequestKeys.registrationToken: fcmToken,
+        },
+        header: header,
+      );
+      return CommonResponse(
+        success: true,
+      );
+    } else {
+      return CommonResponse(
+        success: false,
+        error: ResError(
+          message: AppString.noInternet,
+        ),
+      );
     }
   }
 }
